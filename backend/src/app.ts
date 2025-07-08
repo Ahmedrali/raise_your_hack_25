@@ -15,13 +15,23 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
-const allowedOrigins = [ 'http://localhost:3000', 'http://localhost:3002' ];
+const allowedOrigins = [ 
+  'http://localhost:3000', 
+  'http://localhost:3002',
+  'http://54.194.104.191:3000',
+  'http://54.194.104.191:3001',
+  'http://54.194.104.191:8000'
+];
 
 app.use(cors({
   origin: function(origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.log(`CORS blocked request from origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
     }
   },
