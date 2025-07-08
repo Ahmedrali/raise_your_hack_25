@@ -8,7 +8,7 @@ export class AgentService {
 
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.AGENT_SERVICE_URL || 'http://localhost:8000',
+      baseURL: process.env.AGENT_SERVICE_URL || 'http://54.194.104.191:8000',
       timeout: this.timeout,
       headers: {
         'Content-Type': 'application/json',

@@ -15,7 +15,7 @@ class ApiService {
 
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
+      baseURL: process.env.REACT_APP_API_URL || 'http://54.194.104.191:3001/api',
       timeout: 180000, // 3 minutes for complex agent workflows
       headers: {
         'Content-Type': 'application/json',
