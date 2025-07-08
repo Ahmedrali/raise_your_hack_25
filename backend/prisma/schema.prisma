@@ -1,0 +1,214 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid()) @db.Uuid
+  email             String   @unique @db.VarChar(255)
+  password_hash     String   @db.VarChar(255)
+  first_name        String?  @db.VarChar(100)
+  last_name         String?  @db.VarChar(100)
+  expertise_level   ExpertiseLevel @default(INTERMEDIATE)
+  business_role     String?  @db.VarChar(100)
+  business_context  Json?    @db.JsonB
+  preferences       Json?    @db.JsonB
+  created_at        DateTime @default(now()) @db.Timestamp(6)
+  updated_at        DateTime @updatedAt @db.Timestamp(6)
+  last_login        DateTime? @db.Timestamp(6)
+  
+  // Relationships
+  conversations     Conversation[]
+  learning_progress LearningProgress[]
+  user_sessions     UserSession[]
+  
+  @@map("users")
+}
+
+model UserSession {
+  id         String   @id @default(uuid()) @db.Uuid
+  user_id    String   @db.Uuid
+  token_hash String   @db.VarChar(255)
+  expires_at DateTime @db.Timestamp(6)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+  user_agent String?  @db.Text
+  ip_address String?  @db.VarChar(45)
+  
+  // Relationships
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
+}
+
+model Conversation {
+  id                String             @id @default(uuid()) @db.Uuid
+  user_id           String             @db.Uuid
+  title             String             @db.VarChar(255)
+  session_data      Json               @db.JsonB
+  workflow_type     WorkflowType       @default(SEQUENTIAL)
+  status            ConversationStatus @default(ACTIVE)
+  user_requirements String             @db.Text
+  user_context      Json               @db.JsonB
+  agent_context     Json?              @db.JsonB
+  final_architecture Json?             @db.JsonB
+  why_reasoning     Json?              @db.JsonB
+  business_impact   Json?              @db.JsonB
+  educational_content Json?            @db.JsonB
+  created_at        DateTime           @default(now()) @db.Timestamp(6)
+  updated_at        DateTime           @updatedAt @db.Timestamp(6)
+  completed_at      DateTime?          @db.Timestamp(6)
+  
+  // Relationships
+  user             User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages         ConversationMessage[]
+  architectures    Architecture[]
+  exports          ArchitectureExport[]
+  
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id              String           @id @default(uuid()) @db.Uuid
+  conversation_id String           @db.Uuid
+  role            MessageRole      @default(USER)
+  content         String           @db.Text
+  message_type    MessageType      @default(TEXT)
+  metadata        Json?            @db.JsonB
+  agent_reasoning Json?            @db.JsonB
+  timestamp       DateTime         @default(now()) @db.Timestamp(6)
+  sequence_number Int
+  
+  // Relationships
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  
+  @@unique([conversation_id, sequence_number])
+  @@map("conversation_messages")
+}
+
+model Architecture {
+  id                 String            @id @default(uuid()) @db.Uuid
+  conversation_id    String            @db.Uuid
+  title              String            @db.VarChar(255)
+  description        String?           @db.Text
+  architecture_data  Json              @db.JsonB
+  diagram_type       DiagramType       @default(SYSTEM_OVERVIEW)
+  visualization_config Json?           @db.JsonB
+  why_reasoning      Json              @db.JsonB
+  business_impact    Json              @db.JsonB
+  technical_decisions Json             @db.JsonB
+  alternatives_considered Json?        @db.JsonB
+  version            Int               @default(1)
+  status             ArchitectureStatus @default(DRAFT)
+  created_at         DateTime          @default(now()) @db.Timestamp(6)
+  updated_at         DateTime          @updatedAt @db.Timestamp(6)
+  
+  // Relationships
+  conversation Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  exports      ArchitectureExport[]
+  
+  @@map("architectures")
+}
+
+model ArchitectureExport {
+  id              String     @id @default(uuid()) @db.Uuid
+  conversation_id String     @db.Uuid
+  architecture_id String?    @db.Uuid
+  export_type     ExportType @default(PDF)
+  export_data     Json       @db.JsonB
+  file_path       String?    @db.VarChar(500)
+  download_count  Int        @default(0)
+  expires_at      DateTime?  @db.Timestamp(6)
+  created_at      DateTime   @default(now()) @db.Timestamp(6)
+  
+  // Relationships
+  conversation Conversation  @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  architecture Architecture? @relation(fields: [architecture_id], references: [id], onDelete: SetNull)
+  
+  @@map("architecture_exports")
+}
+
+model LearningProgress {
+  id                String   @id @default(uuid()) @db.Uuid
+  user_id           String   @db.Uuid
+  topic             String   @db.VarChar(200)
+  current_level     ExpertiseLevel @default(BEGINNER)
+  progress_data     Json     @db.JsonB
+  mastery_indicators Json    @db.JsonB
+  last_interaction  DateTime @default(now()) @db.Timestamp(6)
+  total_interactions Int     @default(0)
+  time_spent_minutes Int     @default(0)
+  achievements      Json?    @db.JsonB
+  
+  // Relationships
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@unique([user_id, topic])
+  @@map("learning_progress")
+}
+
+// Enums
+enum ExpertiseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum WorkflowType {
+  SEQUENTIAL
+  PARALLEL
+  CONDITIONAL
+  ITERATIVE
+}
+
+enum ConversationStatus {
+  ACTIVE
+  COMPLETED
+  PAUSED
+  ARCHIVED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum MessageType {
+  TEXT
+  ARCHITECTURE_UPDATE
+  EDUCATIONAL_CONTENT
+  BUSINESS_ANALYSIS
+  WHY_REASONING
+}
+
+enum DiagramType {
+  SYSTEM_OVERVIEW
+  MICROSERVICES
+  DATA_FLOW
+  DEPLOYMENT
+  SECURITY
+  NETWORK
+}
+
+enum ArchitectureStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  IMPLEMENTED
+}
+
+enum ExportType {
+  PDF
+  MARKDOWN
+  JSON
+  MERMAID
+  POWERPOINT
+}
